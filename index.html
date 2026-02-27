@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>O&V Préstamos</title>
+<style>
+body{font-family:Arial;background:#f4f6f9;margin:0}
+.container{max-width:1000px;margin:auto;background:#fff;padding:20px;margin-top:20px;border-radius:10px}
+.hidden{display:none}
+.btn{padding:10px;background:#0a2a66;color:white;border:none;cursor:pointer;margin:5px 0;width:100%}
+input{width:100%;padding:8px;margin:5px 0}
+.card{border:1px solid #ccc;padding:10px;border-radius:8px;margin-top:10px}
+h2,h3{margin:5px 0}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>O&V Préstamos</h2>
+
+<!-- LOGIN ADMIN -->
+<div id="loginAdmin">
+<h3>Acceso Administrador</h3>
+<input id="adminUser" placeholder="Usuario">
+<input id="adminPass" type="password" placeholder="Contraseña">
+<button class="btn" onclick="loginAdmin()">Entrar</button>
+</div>
+
+<!-- PANEL ADMIN -->
+<div id="panelAdmin" class="hidden">
+
+<h3>Panel Administrador</h3>
+
+<h4>Crear Cliente</h4>
+<input id="cNombre" placeholder="Nombre">
+<input id="cCedula" placeholder="Cédula">
+<input id="cTelefono" placeholder="Teléfono">
+<button class="btn" onclick="crearCliente()">Guardar Cliente</button>
+
+<h4>Crear Préstamo</h4>
+<input id="pCedula" placeholder="Cédula del cliente">
+<input id="pMonto" placeholder="Monto">
+<input id="pInteres" placeholder="Interés %">
+<input id="pCuotas" placeholder="Cuotas">
+<button class="btn" onclick="crearPrestamo()">Crear Préstamo</button>
+
+<h4>Registrar Pago</h4>
+<input id="pagoCedula" placeholder="Cédula">
+<input id="pagoMonto" placeholder="Monto pagado">
+<button class="btn" onclick="registrarPago()">Registrar Pago</button>
+
+<button class="btn" onclick="logout()">Cerrar sesión</button>
+</div>
+
+<hr>
+
+<!-- PORTAL CLIENTES -->
+<div id="portalClientes">
+<h3>Consulta de Préstamo</h3>
+<input id="buscarCedula" placeholder="Ingrese su cédula">
+<button class="btn" onclick="buscarCliente()">Consultar</button>
+<div id="resultadoCliente"></div>
+</div>
+
+</div>
+
+<script>
+const ADMIN_USER = "admin";
+const ADMIN_PASS = "12345";
+
+let clientes = JSON.parse(localStorage.getItem("clientes")) || [];
+let prestamos = JSON.parse(localStorage.getItem("prestamos")) || [];
+let pagos = JSON.parse(localStorage.getItem("pagos")) || [];
+
+function loginAdmin(){
+    let u = adminUser.value;
+    let p = adminPass.value;
+    if(u===ADMIN_USER && p===ADMIN_PASS){
+        loginAdminDiv = document.getElementById("loginAdmin");
+        panelAdmin = document.getElementById("panelAdmin");
+        loginAdminDiv.classList.add("hidden");
+        panelAdmin.classList.remove("hidden");
+    }else{
+        alert("Credenciales incorrectas");
+    }
+}
+
+function logout(){
+    location.reload();
+}
+
+function crearCliente(){
+    clientes.push({
+        nombre:cNombre.value,
+        cedula:cCedula.value,
+        telefono:cTelefono.value
+    });
+    localStorage.setItem("clientes", JSON.stringify(clientes));
+    alert("Cliente creado");
+}
+
+function crearPrestamo(){
+    let monto = parseFloat(pMonto.value);
+    let interes = parseFloat(pInteres.value);
+    let total = monto + (monto*interes/100);
+
+    prestamos.push({
+        cedula:pCedula.value,
+        monto:monto,
+        interes:interes,
+        cuotas:pCuotas.value,
+        total:total,
+        saldo:total,
+        estado:"Activo"
+    });
+    localStorage.setItem("prestamos", JSON.stringify(prestamos));
+    alert("Préstamo creado");
+}
+
+function registrarPago(){
+    let ced = pagoCedula.value;
+    let monto = parseFloat(pagoMonto.value);
+
+    let prestamo = prestamos.find(p=>p.cedula===ced);
+    if(!prestamo){alert("No existe préstamo"); return;}
+
+    prestamo.saldo -= monto;
+    if(prestamo.saldo<=0){
+        prestamo.saldo=0;
+        prestamo.estado="Pagado";
+    }
+
+    pagos.push({cedula:ced,monto:monto,fecha:new Date().toLocaleDateString()});
+    localStorage.setItem("prestamos", JSON.stringify(prestamos));
+    localStorage.setItem("pagos", JSON.stringify(pagos));
+    alert("Pago registrado");
+}
+
+function buscarCliente(){
+    let ced = buscarCedula.value;
+    let cliente = clientes.find(c=>c.cedula===ced);
+    let prestamo = prestamos.find(p=>p.cedula===ced);
+    let pagosCliente = pagos.filter(p=>p.cedula===ced);
+
+    if(!cliente || !prestamo){
+        resultadoCliente.innerHTML = "<p>No se encontró información</p>";
+        return;
+    }
+
+    let pagosHTML = pagosCliente.map(p=>`<li>${p.fecha} - RD$ ${p.monto}</li>`).join("");
+
+    resultadoCliente.innerHTML = `
+    <div class="card">
+    <h4>${cliente.nombre}</h4>
+    <p><b>Total préstamo:</b> RD$ ${prestamo.total}</p>
+    <p><b>Saldo pendiente:</b> RD$ ${prestamo.saldo}</p>
+    <p><b>Estado:</b> ${prestamo.estado}</p>
+    <h4>Pagos realizados:</h4>
+    <ul>${pagosHTML}</ul>
+    </div>
+    `;
+}
+</script>
+
+</body>
+</html>
